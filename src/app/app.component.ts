@@ -1,0 +1,127 @@
+import {Component, OnInit, OnDestroy } from '@angular/core';
+import {faHourglass, faPause, faPlay, faStop, faUndoAlt} from '@fortawesome/free-solid-svg-icons';
+
+import { BehaviorSubject, NEVER, timer, Observable, Observer } from 'rxjs';
+import { map, switchMap } from 'rxjs/operators';
+
+function timerWithPause(
+  starterStopper: Observable<boolean>,
+  pauser: Observable<boolean>,
+  fps: number
+): Observable<number> {
+  return new Observable((obs: Observer<number>) => {
+    let i = 0;
+    let ticker = starterStopper.pipe(
+      switchMap(start => {
+        if (start) return timer(0, 1000 / fps).pipe(map(_ => i++));
+        i = 0;
+        return NEVER;
+      })
+    );
+
+    let p = pauser.pipe(switchMap(paused => (paused ? NEVER : ticker)));
+    return p.subscribe({
+      next: val => obs.next(val),
+      error: err => obs.error(err),
+      complete: () => obs.complete()
+    });
+  });
+}
+
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css']
+})
+
+
+export class AppComponent  implements OnInit, OnDestroy {
+
+  title = 'untitled2';
+  faPlay = faPlay;
+  faUndoAlt = faUndoAlt;
+  faHourglass = faHourglass;
+  faStop = faStop;
+  clickCnt = 0;
+  pauser = new BehaviorSubject<boolean>(false);
+  starterStopper = new BehaviorSubject<boolean>(false);
+  stopWatch = new BehaviorSubject<string>('00:00');
+  laps = [];
+
+  ngOnInit() {
+    timerWithPause(this.starterStopper, this.pauser, 100).subscribe({
+      next: (value) => this.stopWatch.next(this.msToDhms(value)),
+    });
+  }
+
+  handleStarter() {
+    if (this.starterStopper.value) {
+      if (this.pauser.value) {
+        this.pauser.next(false);
+      } else {
+        this.pauser.next(true);
+      }
+    } else {
+      this.starterStopper.next(true);
+    }
+  }
+  handleStop() {
+    this.starterStopper.next(false);
+    this.pauser.next(false);
+    this.laps = [];
+    this.stopWatch.next('00:00');
+  }
+  handleReset() {
+    this.handleStop();
+    this.handleStarter();
+  }
+
+  handlePause() {
+    this.clickCnt++;
+    if (this.clickCnt === 1) {
+      setTimeout(() => {
+        this.clickCnt = 0;
+      }, 500);
+    } else if (this.clickCnt === 2) {
+      if (this.starterStopper.value) {
+        if (this.pauser.value) {
+          this.pauser.next(false);
+        } else {
+          this.pauser.next(true);
+        }
+      } else {
+        this.starterStopper.next(true);
+      }
+    }
+  }
+
+
+  msToDhms(msElapsed: any) {
+    let padZero = (value: number) => String(value).padStart(2, '0');
+
+    msElapsed = Number(msElapsed);
+    const hElapsed = msElapsed / 360000;
+    const hRemaining = hElapsed % 24;
+    const sRemaining = (hRemaining * 3600) % 3600;
+
+    const d = Math.floor(hElapsed / 24);
+    const h = Math.floor(hRemaining);
+    const m = Math.floor(sRemaining / 60);
+    const s = Math.floor(sRemaining % 60);
+    const ms = Math.floor((sRemaining % 1) * 100);
+
+    const dDisplay = d > 0 ? padZero(d) + (d == 1 ? ' Day, ' : ' Days, ') : '';
+    const hDisplay = h > 0 ? padZero(h) + ':' : '';
+    const mDisplay = padZero(m) + ':';
+    const sDisplay = padZero(s);
+
+    return `${dDisplay}${hDisplay}${mDisplay}${sDisplay}`;
+  }
+
+  ngOnDestroy() {
+    this.starterStopper.complete();
+    this.pauser.complete();
+  }
+
+}

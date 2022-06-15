@@ -1,0 +1,29 @@
+
+<header>
+  <h4>Furman stopwatch</h4>
+</header>
+<svg class="circle">
+  <circle r="50" cx="200" cy="200" ></circle>
+</svg>
+
+<h2 class="timer" >
+  {{ stopWatch | async }}
+</h2>
+
+
+<button id="go"  (click)="handleStarter()"><fa-icon [icon]="faPlay"></fa-icon>
+</button>
+
+<button id="pause" (click)="handleStop()"><fa-icon [icon]="faStop"></fa-icon>
+</button>
+
+<button id="reset"  (click)="handleReset()"><fa-icon [icon]="faUndoAlt"></fa-icon>
+
+</button>
+<button id="wait"  (click)="handlePause()"><fa-icon [icon]="faHourglass"></fa-icon>
+
+</button>
+<div class="options">
+
+</div>
+
